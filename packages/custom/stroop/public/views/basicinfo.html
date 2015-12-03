@@ -1,0 +1,17 @@
+
+<div id="basic-info"> 
+   What is your age and highest level of education attained?<br>
+   <br>
+   Age: <input type="text" ng-model="currentUserAge"> ... age: {{ currentUserAge }} ...<br>
+   Education:         
+       <select ng-model="currentUserEducation">
+           <option>High School</option>
+           <option>College</option>
+           <option>Masters</option>
+           <option>PhD</option>
+           <option>Enlightenment</option>
+       </select>
+       ... Ed: {{ currentUserEducation}}...
+       <br>
+       <button ng-click="goStroopDirections()" >Next Page</button>
+</div>

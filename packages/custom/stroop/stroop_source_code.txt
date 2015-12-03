@@ -1,0 +1,234 @@
+<div id="welcome">
+   Thanks for visiting Monir's Stroop Task Fiddle.<br>
+   <br>
+   <p id="summary-results-advisory">Statistics will be available after at least one test has been completed.</p>
+   <button id="begin">BEGIN</button>
+   <button id="get-results-button">GET RESULTS CSV</button>
+   <div id="summary-results">
+       <h2>Summary results:</h2>
+       <div id="summary-results-report">
+           <table id="summary-results-report-table" class="summary-results-report-table">
+               
+           </table>
+       </div>
+    </div>
+</div>
+
+<div id="basic-info"> 
+   What is your age and highest level of education attained?<br>
+   <br>
+   Age: <input type="text" id="age"><br>
+   Education:         
+       <select id="education">
+           <option>High School</option>
+           <option>College</option>
+           <option>Masters</option>
+           <option>PhD</option>
+           <option>Enlightenment</option>
+       </select><br>
+       <button id="go-stroop-task-directions">Next Page</button>
+</div>
+
+<div id="stroop-task-directions">
+    <h3>Directions</h3>
+    You will be presented a series of color names. Press the key corresponding to the first letter of
+    the ACTUAL color of the word, which is not necessarily the word itself. For example, for both <span style="color: red">RED</span> and <span style="color: red">BLUE</span>, the correct choice is: R<br>
+    Please respond as quickly and accurately as possible. After 20 or more trials you may press the "End Test" button at any time to see your test results.<br>
+    <br>
+        <button id="start-stroop-task">Start Stroop Task</button>
+</div>
+    
+<div id="stroop-task">
+    <div id="color-box" class="color-box"></div>
+    <button id="end-task-button">End task</button>
+</div>
+
+
+var results = [],
+    summaryResults = [],
+    currentUserId = 1,
+    currentUserAge,
+    currentUserEducation;
+
+$("#welcome").show(); // just to be explicit about it.
+$("#summary-results").hide();
+$("#get-results-button").hide(); // hide button because no results at first
+$("#basic-info").hide();
+$("#stroop-task-directions").hide();
+$("#stroop-task").hide();
+
+$("#begin").click(function(){
+   $("#welcome").hide();
+   $("#basic-info").show();
+});
+
+$("#go-stroop-task-directions").click(function(){
+    currentUserAge = $("#age").val();
+    currentUserEducation = $("#education").val();
+    $("#basic-info").hide();
+    $("#stroop-task-directions").show();
+});
+
+$("#start-stroop-task").click(function(){
+   $("#stroop-task-directions").hide();
+     $("#stroop-task").show();
+     $("#end-task-button").hide();
+    
+    var colors = ['blue', 'red', 'green', 'purple', 'yellow'],
+        loopCount = 0,
+        minTrials = 20,
+      getRandomColor,
+        colorKeys,
+        nextTrial,
+        verbalColor,
+        physicalColor,
+        startTime,
+        trialType,
+        calculateSummaryResults,
+        renderSummaryResults;
+    
+    // note: colors should have unique initial characters. If list
+    // will be configurable, then func to check uniqueness will be required.
+    
+    getRandomColor = function (){ 
+        return colors[Math.floor(Math.random()*colors.length)];
+    };
+    
+    colorKeys = function(){
+        return colors.map(function(color){
+            return color[0];
+        });
+    };
+    
+    nextTrial = function(){
+        startTime = (new Date()).getTime();
+        trialType = (Math.random() > .5 ? 'normal' : 'interference');
+        verbalColor = getRandomColor();
+        
+        // normal vs interference tests are created here. In a more advanced
+        // implementation we could require a minimum count of each trial type
+        // before considering trial collection complete.
+        if (trialType == 'normal') { // normal trialType -> word will match color
+            physicalColor = verbalColor;
+        } else { // else interference trialType -> word will not match color
+          do {
+                physicalColor = getRandomColor();
+            } while (physicalColor == verbalColor);
+        }
+        
+        $("#color-box").css('color', physicalColor);
+        $("#color-box").html(verbalColor);
+        
+        if (loopCount++ >= minTrials) {
+        $("#end-task-button").show();         
+        }
+    } 
+    
+    calculateSummaryResults = function(){
+        var totalTimeNormal =
+            normalCount = 
+            totalTimeInterference = 
+            interferenceCount = 
+            numCorrect = 0;
+      results.slice(-loopCount).forEach(function(curVal, index, trialCollection){
+            numCorrect = (curVal.matchResult == 'match' ? ++numCorrect : numCorrect);
+            if (curVal.trialType == 'normal') {
+                normalCount++;
+                totalTimeNormal += curVal.RT;
+            } else {
+                interferenceCount++;
+                totalTimeInterference += curVal.RT;
+            } 
+        });
+        summaryResults.unshift({
+            id: currentUserId, 
+            percentCorrect: (numCorrect / loopCount) * 100,
+            avgTimeNormal: totalTimeNormal/normalCount,
+            avgTimeInterference: totalTimeInterference/interferenceCount,
+            completionTime: (new Date().getTime())
+        });
+    }
+    
+    renderSummaryResults = function(){
+        $("#summary-results-report-table").html("<tr><th>id</th><th>percent correct</th><th>normal time</th><th>interference time</th><th>completion time</tr>");
+        summaryResults.forEach(function(summary){
+          $("#summary-results-report-table").append("<tr><td>" + summary.id + "</td><td>" + summary.percentCorrect.toFixed() + "</td><td>" + summary.avgTimeNormal.toFixed() + "ms</td><td>" + summary.avgTimeInterference.toFixed() + "ms</td><td>" + (parseInt((new Date().getTime() - summary.completionTime)/1000)) + "s ago</td></tr>");
+        });
+        $("#summary-results-advisory").hide();
+        $("#summary-results").show();
+    };
+    
+    $('body').keyup(function(e){
+        var key = String.fromCharCode(e.which).toLowerCase(),
+            keyColorIndex = colorKeys().indexOf(key),
+            matchResult;
+        
+        if (keyColorIndex !== -1) { // key is valid? process it and go to next trial
+            results.push({
+                currentUserId: currentUserId,
+                currentUserAge: currentUserAge,
+                currentUserEducation: currentUserEducation,
+                trial: loopCount,
+                color: physicalColor,
+                word: verbalColor,
+                response: colors[keyColorIndex],
+                trialType: trialType,
+                matchResult: key == physicalColor[0] ? 'match' : 'no match',
+                RT: (new Date().getTime() - startTime)
+             });
+            // flash feedback so user knows input received 
+            $("#color-box").fadeTo(100,0).fadeTo(10,1, nextTrial);  
+        } else return; // else ignore
+    });
+
+    $("#end-task-button").click(function(){
+       $("body").off('keyup'); // release event handler
+       $("#end-task-button").off('click'); //release event handler
+       $("#stroop-task").hide();
+       $("#welcome").show();
+       $("#get-results-button").show();
+       calculateSummaryResults();
+       renderSummaryResults();
+       currentUserId++; // next user.
+    });
+    
+    nextTrial(); // begin test
+
+});
+
+$("#get-results-button").click(function(){
+    var resultString = '';
+    resultString += 'id,age,education,trial,color,word,response,trial type,match result,RT\n'; 
+
+    $.each(results,function(i,trial){ // 
+        resultString += ''  + trial.currentUserId + ',' 
+                    + trial.currentUserAge + ','
+                  + trial.currentUserEducation + ','
+                  + trial.trial + ','
+                  + trial.color + ','
+                  + trial.word + ','
+                  + trial.response + ','
+                  + trial.trialType + ','
+                  + trial.matchResult + ','
+                  + trial.RT
+                  + '\n';
+    });
+    
+    window.open("data:text/csv;charset=utf-8," + encodeURIComponent(resultString));
+});
+
+
+.color-box {
+    width: 400px;
+    margin: 40px auto;
+    background-color: #DDD;
+    font-size: 5em;
+    text-align: center;
+    padding: 1em;
+}
+
+.summary-results-report-table, th, td {
+     padding: 3px;
+     border: 1px solid black;
+     text-align: center;
+}
